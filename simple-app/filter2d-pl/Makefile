@@ -1,4 +1,5 @@
-# Copyright 2019-2022 Xilinx, Inc.
+# Copyright (C) 2019-2022 Xilinx, Inc.
+# Copyright (C) 2022-2024 Advance Micro Devices, Inc.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -11,13 +12,12 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-# vitis makefile-generator v2.0.8
 
 ############################## Help Section ##############################
 .PHONY: help
 help:
 	$(ECHO) "Makefile Usage:"
-	$(ECHO) "  make host"
+	$(ECHO) "  make "
 	$(ECHO) "      Command to build host application."
 	$(ECHO) ""
 	$(ECHO) "  make clean"
@@ -26,32 +26,15 @@ help:
 
 ############################## Setting up Project Variables ##############################
 
-.PHONY: check_xrt
-check_xrt:
-ifeq (,$(wildcard $(XILINX_XRT)/lib/libxilinxopencl.so))
-	@echo "Cannot locate XRT installation. Please set XILINX_XRT variable." && false
-endif
-
-export PATH := $(XILINX_VITIS)/bin:$(XILINX_XRT)/bin:$(PATH)
-ifeq ($(HOST_ARCH), x86)
-ifeq (,$(LD_LIBRARY_PATH))
-LD_LIBRARY_PATH := $(XILINX_XRT)/lib
-else
-LD_LIBRARY_PATH := $(XILINX_XRT)/lib:$(LD_LIBRARY_PATH)
-endif
-endif
-
 # Cleaning stuff
 RM = rm -f
 RMDIR = rm -rf
 
-MV = mv -f
-CP = cp -rf
 ECHO:= @echo
 
 ########################## Setting up Host Variables ##########################
 
-EXE_FILE = filter2d-pl.elf
+EXE_FILE = filter2D_accel_pl.elf
 HOST_SRCS += ./src/xcl2.cpp ./src/host.cpp
 
 CXXFLAGS += -I$(XILINX_XRT)/include -I./src -I/usr/include/opencv4
@@ -61,11 +44,17 @@ LDFLAGS += -L$(XILINX_XRT)/lib
 LDFLAGS += -lstdc++ -lOpenCL -lopencv_core -lopencv_imgproc -lopencv_imgcodecs
 
 ############################## Setting Rules for Host (Building Host Executable) ##############################
+.DEFAULT_GOAL := all
 
-.PHONY: host
-host: check_xrt $(EXE_FILE)
+all: check_xrt $(EXE_FILE)
+
 $(EXE_FILE): $(HOST_SRCS)
 	$(CXX) -o $@ $^ $(CXXFLAGS) $(LDFLAGS)
+
+check_xrt:
+ifeq (,$(wildcard $(XILINX_XRT)/lib/libxilinxopencl.so))
+	@echo "Cannot locate XRT installation. Please set XILINX_XRT variable." && false
+endif
 
 ############################## Cleaning Rules ##############################
 

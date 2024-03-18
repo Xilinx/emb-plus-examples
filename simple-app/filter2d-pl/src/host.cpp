@@ -34,8 +34,8 @@
 #define RESIZE_HEIGHT 1080
 #define RESIZE_WIDTH 1920
 #define FOURCC 0x56595559 // YUYV Format
-#define DEFAULT_ACCEL                                                                    \
-    "/opt/xilinx/firmware/emb_plus/ve2302_pcie_qdma-es1/base/test/"                      \
+#define DEFAULT_ACCEL                                                          \
+    "/opt/xilinx/firmware/emb_plus/ve2302_pcie_qdma-es1/base/test/"            \
     "filter2d_pl.xclbin"
 
 // opencv filter coefficients
@@ -64,8 +64,9 @@ void matrixDeconstructor(float matrix[][FILTER_WIDTH], short int Darray[]) {
     }
 }
 
-const char *filterArgs[] = {"Horizontal-Gradient", "Emboss", "Edge", "Blur", "Identity",
-                            "Horizontal-Sobel"};
+const char *filterArgs[] = {
+    "Horizontal-Gradient", "Emboss", "Edge", "Blur", "Identity",
+    "Horizontal-Sobel"};
 
 enum Filter { HGRAD, EMBOSS, EDGE, BLUR, IDENTITY, HSOBEL, MAX_FILTER_NUM };
 
@@ -77,9 +78,12 @@ void printFilterOptions(void) {
 }
 
 void printHelp(void) {
-    std::cout << "=================================================" << std::endl
-              << "Filter2d Accelertation Example Application Usage " << std::endl
-              << "=================================================" << std::endl
+    std::cout << "================================================="
+              << std::endl
+              << "Filter2d Accelertation Example Application Usage "
+              << std::endl
+              << "================================================="
+              << std::endl
               << "<Executable Name> <Filter> [input_image_path]" << std::endl
               << std::endl
               << "Example: filter2D_accel_pl.elf Emboss" << std::endl
@@ -129,8 +133,9 @@ void compareResuts(cv::Mat &outImg, cv::Mat &ref, int rows, int cols) {
     dataRefOut = (uint8_t *)cvDataVec.data();
     for (int i = 0; i < cols * rows; i++) {
         if (abs(dataRefOut[i] - dataOut[i]) > acceptableError) {
-            std::cout << "err at : i=" << i << " err=" << abs(dataRefOut[i] - dataOut[i])
-                      << "=" << unsigned(dataRefOut[i]) << "-" << unsigned(dataOut[i])
+            std::cout << "err at : i=" << i
+                      << " err=" << abs(dataRefOut[i] - dataOut[i]) << "="
+                      << unsigned(dataRefOut[i]) << "-" << unsigned(dataOut[i])
                       << std::endl;
             errCount++;
         }
@@ -175,15 +180,20 @@ int main(int argc, char **argv) {
     // read Input image & resize to HD (jpg)
     InImage = cv::imread(defaultImg, cv::IMREAD_COLOR);
     if (InImage.data == NULL) {
-        std::cerr << "Failed to open image at PATH: " << defaultImg << std::endl;
+        std::cerr << "Failed to open image at PATH: " << defaultImg
+                  << std::endl;
         return (-1);
     } else
-        std::cout << "Input Image: height:" << InImage.rows << ", width:" << InImage.cols
-                  << ", channels:" << InImage.channels() << ", pixels:" << InImage.total()
-                  << ", bytes:" << InImage.total() * InImage.elemSize() << std::endl;
+        std::cout << "Input Image: height:" << InImage.rows
+                  << ", width:" << InImage.cols
+                  << ", channels:" << InImage.channels()
+                  << ", pixels:" << InImage.total()
+                  << ", bytes:" << InImage.total() * InImage.elemSize()
+                  << std::endl;
 
-    std::cout << "Resizing input image from " << InImage.rows << "x" << InImage.cols
-              << " to " << RESIZE_WIDTH << "x" << RESIZE_HEIGHT << std::endl;
+    std::cout << "Resizing input image from " << InImage.rows << "x"
+              << InImage.cols << " to " << RESIZE_WIDTH << "x" << RESIZE_HEIGHT
+              << std::endl;
     cv::resize(InImage, resizedImg, cv::Size(RESIZE_WIDTH, RESIZE_HEIGHT), 0, 0,
                cv::INTER_LINEAR);
 
@@ -200,7 +210,8 @@ int main(int argc, char **argv) {
     cv::Point anchor = cv::Point(-1, -1);
     std::vector<cv::Mat> yuvChannels, concatImg;
     cv::split(hwinImg, yuvChannels);
-    cv::filter2D(yuvChannels[0], temp, CV_8U, filter, anchor, 0, cv::BORDER_CONSTANT);
+    cv::filter2D(yuvChannels[0], temp, CV_8U, filter, anchor, 0,
+                 cv::BORDER_CONSTANT);
     concatImg.push_back(temp);           // Y channel
     concatImg.push_back(yuvChannels[1]); // UV channel
     cv::merge(concatImg, ref);
@@ -234,27 +245,27 @@ int main(int argc, char **argv) {
 
     // Allocate Buffer in Global Memory
     std::cout << "Allocate buffer in global memory" << std::endl;
-    cl::Buffer imageToDevice(context, CL_MEM_READ_ONLY, (height * width * chan), NULL,
-                             &err);
+    cl::Buffer imageToDevice(context, CL_MEM_READ_ONLY, (height * width * chan),
+                             NULL, &err);
     std::cout << "create image to device buffer status:  " << err << std::endl;
-    cl::Buffer imageFromDevice(context, CL_MEM_WRITE_ONLY, (height * width * chan), NULL,
-                               &err);
+    cl::Buffer imageFromDevice(context, CL_MEM_WRITE_ONLY,
+                               (height * width * chan), NULL, &err);
     std::cout << "create image from device status:       " << err << std::endl;
-    cl::Buffer kernelFilterToDevice(context, CL_MEM_READ_ONLY, sizeof(short int) * 9,
-                                    NULL, &err);
+    cl::Buffer kernelFilterToDevice(context, CL_MEM_READ_ONLY,
+                                    sizeof(short int) * 9, NULL, &err);
     std::cout << "create kernel filter to device status: " << err << std::endl;
 
     // Copying input data to Device buffer from host memory
-    std::cout << "1. Copying input data to device buffer" << height * width * chan
-              << " Bytes" << std::endl;
+    std::cout << "1. Copying input data to device buffer"
+              << height * width * chan << " Bytes" << std::endl;
 
     q.enqueueWriteBuffer(imageToDevice, CL_TRUE, 0, (height * width * chan),
                          (unsigned short *)hwinImg.data);
     std::cout << "2. Copying kernel data to device buffer" << std::endl;
 
     matrixDeconstructor(cvkdata[(int)Ftype], Darray);
-    q.enqueueWriteBuffer(kernelFilterToDevice, CL_TRUE, 0, sizeof(short int) * 9,
-                         (short int *)Darray);
+    q.enqueueWriteBuffer(kernelFilterToDevice, CL_TRUE, 0,
+                         sizeof(short int) * 9, (short int *)Darray);
     std::cout << "set kernel arguments" << std::endl;
 
     // Set the kernel arguments
@@ -290,8 +301,9 @@ int main(int argc, char **argv) {
                         (unsigned short *)outImg.data);
     q.finish();
 
-    std::cout << "Out Image: height:" << outImg.rows << ", width:" << outImg.cols
-              << ", channels:" << outImg.channels() << ", pixels:" << outImg.total()
+    std::cout << "Out Image: height:" << outImg.rows
+              << ", width:" << outImg.cols << ", channels:" << outImg.channels()
+              << ", pixels:" << outImg.total()
               << ", bytes:" << outImg.total() * outImg.elemSize() << std::endl;
 
     cv::cvtColor(outImg, temp, cv::COLOR_YUV2BGR_YUYV);

@@ -1,29 +1,40 @@
-# Prerequisites
-```
-$ source /proj/xbuilds/2023.1_daily_latest/installs/lin64/Vivado/2023.1/settings64.sh
-$ source /proj/xbuilds/2023.1_released/xbb/xrt/packages/setenv.sh
-$ install opencv on x86 host machine
+# Embedded Plus Platform Applications
+
+The Embedded Plus platform is a combination of the Rayzen 86 and Versal Edge device. This
+repository provides examples and source code to help you get started with development on
+this platform.
+
+The x86 device is the Ryzen R2314, and the Versal Edge device is the VE2302.
+
+## Examples
+
+Below is a table listing all the examples available in this repository:
+
+| Example Name       | Description                              |
+|--------------------|------------------------------------------|
+| filter2d-pl        | Accelerator in PL logic                  |
+
+Each subfolder contains a README file that provides instructions for testing the
+corresponding sub-application on this platform.
+
+## Getting Started
+
+To get started, follow these steps:
+
+1. Clone this repository to your local machine:
 
 ```
-# Generating xclbin
-```
-$ cd root directory of the repo
-$ make all
+git clone https://github.com/Xilinx/emb-plus/emb-plus-examples
 ```
 
-# Compiling F2d application
+2. Navigate to the desired sub-application folder:
 ```
-$ cd app
-$ make host TARGET=hw
+cd <sub_application_folder>
 ```
-# Test application on V70 target
-```
-$ ssh xsjvivekana50
-$ source above pre-req tools
-$ # xbutil program -d 0000:17:00.1 -u binary_container_1.xclbin
-$ cp _x/link/int/binary_container_1.xclbin app/filter2d_accel.xclbin
-$ ./filter2d.exe ../test_images/flower_1920x1080.yuv
-```
+
+3. Follow the instructions provided in the README file of the subfolder to test the
+application on the Embedded Plus platform.
+
 # License
 (C) Copyright 2024, Advanced Micro Devices Inc.\
 SPDX-License-Identifier: Apache-2.0

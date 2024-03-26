@@ -1,4 +1,0 @@
-[submodule "common/Vitis_Libraries/vision"]
-	path = common/Vitis_Libraries/vision
-	url = https://gitenterprise.xilinx.com/SOM/xf_opencv.git
-	branch = ckohn/f2d_yuv

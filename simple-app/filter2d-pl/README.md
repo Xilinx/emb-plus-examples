@@ -29,13 +29,13 @@ Installing Application
 
 ```
 # Install 2.17 Xilinx RunTime (XRT) library
-$ sudo dpkg -i xrt_202410.2.17.240_22.04-amd64-xrt.deb
+$ sudo apt install -y ./xrt_202410.2.17.240_22.04-amd64-xrt.deb
 
 # Install accel firmware binary for filter2D (*xclbin)
-$ sudo dpkg -i filter2d-pl-ve2302-es1_1.0.deb
+$ sudo apt install ./filter2d-pl-ve2302-es1_1.0.deb
 
 # Install host app, and OpenCV as dependency.
-$ sudo dpkg -i filter2d-acceleration-application_0.1-0xlnx1_all.deb
+$ sudo apt install -y ./filter2d-acceleration-application_0.1-0xlnx1_all.deb
 
 ```
 
@@ -68,7 +68,10 @@ for any artifacts.
 Compiling F2d application
 -------------------------
 
+The application depends on OpenCV library dev package and installing it is required before compilaiton.
+
 ```
+$ sudo apt install libopencv-dev
 $ cd emb-plus-examples/simple-app/filter2d-pl
 $ make
 ```

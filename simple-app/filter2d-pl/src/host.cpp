@@ -241,8 +241,11 @@ int main(int argc, char **argv) {
     cl::Program::Binaries bins{{binaryFile.data(), binaryFile.size()}};
     devices.resize(1);
     cl::Program program(context, devices, bins);
-    cl::Kernel krnl(program, "filter2d_pl_accel");
-
+    cl::Kernel krnl(program, "filter2d_pl_accel", &err);
+    if (err) {
+        std::cerr << "Failed to program kernel" << std::endl;
+        return (-1);
+    }
     // Allocate Buffer in Global Memory
     std::cout << "Allocate buffer in global memory" << std::endl;
     cl::Buffer imageToDevice(context, CL_MEM_READ_ONLY, (height * width * chan),

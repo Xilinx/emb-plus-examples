@@ -29,6 +29,7 @@
 #include <string>
 #include <sys/stat.h>
 
+// #define DEBUG_MODE 1 // uncomment to enable debug information
 #define FILTER_HEIGHT 3
 #define FILTER_WIDTH 3
 #define RESIZE_HEIGHT 1080
@@ -129,15 +130,18 @@ void compareResuts(cv::Mat &outImg, cv::Mat &ref, int rows, int cols) {
     dataRefOut = (uint8_t *)cvDataVec.data();
     for (int i = 0; i < cols * rows; i++) {
         if (abs(dataRefOut[i] - dataOut[i]) > acceptableError) {
+#ifdef DEBUG_MODE
             std::cout << "err at : i=" << i
                       << " err=" << abs(dataRefOut[i] - dataOut[i]) << "="
                       << unsigned(dataRefOut[i]) << "-" << unsigned(dataOut[i])
                       << std::endl;
+#endif
             errCount++;
         }
     }
     if (errCount) {
-        std::cout << "Result: Test failed" << std::endl;
+        std::cout << "Result: Test failed " << errCount << "/" << cols * rows
+                  << " unmatched Bytes" << std::endl;
     } else
         std::cout << "Result: Test Passed" << std::endl;
 }
@@ -196,8 +200,7 @@ int main(int argc, char **argv) {
                   << ", channels:" << InImage.channels()
                   << ", pixels:" << InImage.total()
                   << ", bytes:" << InImage.total() * InImage.elemSize()
-                  << ", Input image path:" << inputImage
-                  << std::endl;
+                  << ", Input image path:" << inputImage << std::endl;
 
     std::cout << "Resizing input image from " << InImage.rows << "x"
               << InImage.cols << " to " << RESIZE_WIDTH << "x" << RESIZE_HEIGHT

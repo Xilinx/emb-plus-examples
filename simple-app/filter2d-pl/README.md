@@ -65,6 +65,11 @@ hardware accelerator and the reference image. Both the processed and reference
 images are saved in JPG format, allowing users to inspect the processed image
 for any artifacts.
 
+By default the application will include three example *.jpg files:
+* hwin_HD.jpg - Is an input reference image to both the HW accelerator & SW reference
+* ocv_ref.jpg - Is an output image as processed by the OpenCV SW libraries
+* hw_out.jpg - Is an output image as processed by the PL HW acceleration library
+
 Compiling F2d application
 -------------------------
 

@@ -29,7 +29,7 @@ Installing Application
 
 ```
 # Install 2.17 Xilinx RunTime (XRT) library
-$ sudo apt install -y ./xrt_202410.2.17.240_22.04-amd64-xrt.deb
+$ sudo apt install -y ./xrt_202410.2.17.326_22.04-amd64-xrt.deb
 
 # Install accel firmware binary for filter2D (*xclbin)
 $ sudo apt install ./filter2d-pl-ve2302_1.0.deb

@@ -35,6 +35,35 @@ cd <sub_application_folder>
 3. Follow the instructions provided in the README file of the subfolder to test the
 application on the Embedded Plus platform.
 
+## Create Debian Package
+
+A step-by-step guide to create a Debian package (deb) for emb-plus-examples
+from its source code on the embedded-plus target.
+
+The below steps are recommended to be executed on the emb-plus target using
+Ubuntu 22.04 OS.
+
+Dependency packages required for debian package generation on emb-plus target.
+
+```
+sudo apt install -y dkms
+sudo apt install -y libopencv-dev
+sudo apt install -y ./xrt_202410.2.17.326_22.04-amd64-xrt.deb
+# Note: xrt is a local package
+```
+Debian package generation
+```
+git clone https://github.com/Xilinx/emb-plus/emb-plus-examples
+cd emb-plus-examples
+rm -rf .git
+tar czvf ../emb-plus-examples_0.5.orig.tar.gz .
+dpkg-buildpackage -us -uc -sa -F
+```
+The output will be a deb package named
+'filter2d-acceleration-application_0.5-0xlnx1_all.deb', to install run
+```
+sudo apt install ./filter2d-acceleration-application_0.5-0xlnx1_all.deb
+```
 # License
 (C) Copyright 2024, Advanced Micro Devices Inc.\
 SPDX-License-Identifier: Apache-2.0

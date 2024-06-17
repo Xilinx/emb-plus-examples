@@ -32,10 +32,10 @@ Installing Application
 $ sudo apt install -y ./xrt_202410.2.17.326_22.04-amd64-xrt.deb
 
 # Install accel firmware binary for filter2D (*xclbin)
-$ sudo apt install ./filter2d-pl-ve2302_1.0.deb
+$ sudo apt install ./filter2d-pl-ve2302_0.5.deb
 
 # Install host app, and OpenCV as dependency.
-$ sudo apt install -y ./filter2d-acceleration-application_0.1-0xlnx1_all.deb
+$ sudo apt install -y ./filter2d-acceleration-application_0.5-0xlnx1_all.deb
 
 ```
 

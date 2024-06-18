@@ -43,21 +43,21 @@ $ sudo apt install -y ./filter2d-acceleration-application_0.5-0xlnx1_all.deb
 Test application
 ----------------
 ```
+# obtain a sample test image
+$ wget -O testimg.jpg https://cdn.pixabay.com/photo/2022/04/09/05/23/tulip-7120784_960_720.jpg
+
 $ source /opt/xilinx/xrt/setup.sh
 
 $ export PATH="/opt/xilinx/filter2d-pl:$PATH"
 
 # Filter2d Accelertation Example Application Usage:
-$ <Executable Name> <Filter> -i [input_image_path] -u [user_xclbin]
+$ <Executable Name> <Filter> -i <path/testimg> -u [path/user_xclbin]
 
 # Use -h to find available filter options
 $ <Executable Name> -h
 
-# Example Test with default image
-$ filter2D_accel_pl.elf Blur
-
-# Example Test with custom image
-$ filter2D_accel_pl.elf Blur -i /abs_path_jpg_image_file -u /abs_path_user_xclbin
+# Example using sample test image
+$ filter2D_accel_pl.elf Blur -i <path/testimg.jpg>
 ```
 
 The application performs a pixel-by-pixel comparison between the output from the

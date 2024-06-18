@@ -24,7 +24,7 @@ To get started, follow these steps:
 1. Clone this repository to your local machine:
 
 ```
-git clone https://github.com/Xilinx/emb-plus/emb-plus-examples
+git clone https://github.com/Xilinx/emb-plus-examples
 ```
 
 2. Navigate to the desired sub-application folder:
@@ -53,7 +53,7 @@ sudo apt install -y ./xrt_202410.2.17.326_22.04-amd64-xrt.deb
 ```
 Debian package generation
 ```
-git clone https://github.com/Xilinx/emb-plus/emb-plus-examples
+git clone https://github.com/Xilinx/emb-plus-examples
 cd emb-plus-examples
 rm -rf .git
 tar czvf ../emb-plus-examples_0.5.orig.tar.gz .

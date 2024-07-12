@@ -1,3 +1,9 @@
+emb-plus-examples (0.6-0xlnx1) jammy; urgency=medium
+
+  * Release PLIO Filter2d AIE example
+
+ -- Vivekananda Dayananda <vivekananda.dayananda@amd.com>  Fri, 12 Jul 2024 11:52:55 -0700
+
 emb-plus-examples (0.5-0xlnx1) jammy; urgency=medium
 
   * Initial release

@@ -5,3 +5,4 @@
 
 override_dh_auto_install:
 	make -C simple-app/filter2d-pl/
+	make -C simple-app/filter2d-aie/

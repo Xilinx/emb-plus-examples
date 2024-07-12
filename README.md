@@ -1,6 +1,6 @@
 # Embedded Plus Platform Applications
 
-The Embedded Plus platform is a combination of the Rayzen 86 and Versal Edge device. This
+The Embedded Plus platform is a combination of the Rayzen x86 and Versal Edge device. This
 repository provides examples and source code to help you get started with development on
 this platform.
 
@@ -13,6 +13,7 @@ Below is a table listing all the examples available in this repository:
 | Example Name       | Description                              |
 |--------------------|------------------------------------------|
 | filter2d-pl        | Accelerator in PL logic                  |
+| filter2d-aie       | Accelerator in AIE                       |
 
 Each subfolder contains a README file that provides instructions for testing the
 corresponding sub-application on this platform.
@@ -24,7 +25,7 @@ To get started, follow these steps:
 1. Clone this repository to your local machine:
 
 ```
-git clone https://github.com/Xilinx/emb-plus-examples
+git clone --recursive https://github.com/Xilinx/emb-plus-examples
 ```
 
 2. Navigate to the desired sub-application folder:
@@ -49,20 +50,21 @@ Dependency packages required for debian package generation on emb-plus target.
 sudo apt install -y dkms
 sudo apt install -y libopencv-dev
 sudo apt install -y ./xrt_202410.2.17.326_22.04-amd64-xrt.deb
+sudo apt install dh-make dpkg-dev devscripts build-essential debhelper
 # Note: xrt is a local package
 ```
 Debian package generation
 ```
-git clone https://github.com/Xilinx/emb-plus-examples
+git clone --recursive https://github.com/Xilinx/emb-plus-examples
 cd emb-plus-examples
-rm -rf .git
-tar czvf ../emb-plus-examples_0.5.orig.tar.gz .
+rm -rf .git common/Vitis_Libraries/.git
+tar czvf ../emb-plus-examples_0.6.orig.tar.gz .
 dpkg-buildpackage -us -uc -sa -F
 ```
 The output will be a deb package named
-'filter2d-acceleration-application_0.5-0xlnx1_all.deb', to install run
+'filter2d-acceleration-application_0.6-0xlnx1_all.deb', to install run
 ```
-sudo apt install ./filter2d-acceleration-application_0.5-0xlnx1_all.deb
+sudo apt install ./filter2d-acceleration-application_0.6-0xlnx1_all.deb
 ```
 # License
 (C) Copyright 2024, Advanced Micro Devices Inc.\

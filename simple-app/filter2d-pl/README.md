@@ -35,7 +35,7 @@ $ sudo apt install -y ./xrt_202410.2.17.326_22.04-amd64-xrt.deb
 $ sudo apt install ./filter2d-pl-ve2302_0.5.deb
 
 # Install host app, and OpenCV as dependency.
-$ sudo apt install -y ./filter2d-acceleration-application_0.5-0xlnx1_all.deb
+$ sudo apt install -y ./filter2d-acceleration-application_0.6-0xlnx1_all.deb
 
 ```
 
@@ -43,21 +43,18 @@ $ sudo apt install -y ./filter2d-acceleration-application_0.5-0xlnx1_all.deb
 Test application
 ----------------
 ```
-# obtain a sample test image
-$ wget -O testimg.jpg https://cdn.pixabay.com/photo/2022/04/09/05/23/tulip-7120784_960_720.jpg
-
 $ source /opt/xilinx/xrt/setup.sh
 
 $ export PATH="/opt/xilinx/filter2d-pl:$PATH"
 
 # Filter2d Accelertation Example Application Usage:
-$ <Executable Name> <Filter> -i <path/testimg> -u [path/user_xclbin]
+$ <Executable Name> <Filter> -i [path/testimg] -u [path/user_xclbin]
 
 # Use -h to find available filter options
 $ <Executable Name> -h
 
-# Example using sample test image
-$ filter2D_accel_pl.elf Blur -i <path/testimg.jpg>
+# Example using default test image
+$ filter2D_accel_pl.elf Blur
 ```
 
 The application performs a pixel-by-pixel comparison between the output from the

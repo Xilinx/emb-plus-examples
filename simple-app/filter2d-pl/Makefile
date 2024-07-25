@@ -35,6 +35,7 @@ ECHO:= @echo
 ########################## Setting up Host Variables ##########################
 
 EXE_FILE = filter2D_accel_pl.elf
+ELFDIR = /opt/xilinx/filter2d-pl
 HOST_SRCS += ./src/xcl2.cpp ./src/host.cpp
 
 CXXFLAGS += -I$(XILINX_XRT)/include -I./src -I/usr/include/opencv4
@@ -55,6 +56,11 @@ check_xrt:
 ifeq (,$(wildcard $(XILINX_XRT)/lib/libxilinxopencl.so))
 	@echo "Cannot locate XRT installation. Please set XILINX_XRT variable." && false
 endif
+
+############################## Setting Rules for installing target binaries ##############################
+install: $(EXE_FILE)
+	install -d $(ELFDIR)
+	install -m 0755 $(EXE_FILE) $(ELFDIR)
 
 ############################## Cleaning Rules ##############################
 

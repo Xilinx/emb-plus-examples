@@ -158,7 +158,7 @@ int main(int argc, char **argv) {
     double diffProf;
 
     std::string arg, inputImage, userXclbin;
-    inputImage = "/opt/xilinx/filter2d-pl/test_image/sample_image_4k.jpg";
+    inputImage = "/opt/xilinx/testimg/HD.jpg";
     userXclbin = "/opt/xilinx/firmware/emb_plus/ve2302_pcie_qdma/base/test/"
                  "filter2d_pl.xclbin";
 

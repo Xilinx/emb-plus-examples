@@ -11,4 +11,4 @@ Package: filter2d-acceleration-application
 Architecture: all
 Depends: ${shlibs:Depends}, ${misc:Depends}, xrt (>= 2.17.300), libopencv-dev (>= 4.5.4)
 Description: Example filter2d Acceleration application
-	A simple application demonstrating PL accelerator on embedded-plus-platform
+	Two simple applications demonstrating PL and AIE accelerator on embedded-plus-platform

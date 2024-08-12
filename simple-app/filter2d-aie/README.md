@@ -29,6 +29,9 @@ To use this application, follow these steps:
 
 ## Installing Application
 
+[Download link to pre-built Application
+packages](https://www.sapphiretech.com/en/commercial/edge-plus-vpr_4616#Download)
+
 ```
 # Install 2.17 Xilinx RunTime (XRT) library
 $ sudo apt install -y ./xrt_202410.2.17.326_22.04-amd64-xrt.deb

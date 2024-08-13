@@ -36,6 +36,11 @@ cd <sub_application_folder>
 3. Follow the instructions provided in the README file of the subfolder to test the
 application on the Embedded Plus platform.
 
+4. Download the prebuilt debian packages mentioned in the respective application
+README file.   
+[Download link to pre-built Application
+packages](https://www.sapphiretech.com/en/commercial/edge-plus-vpr_4616#Download)
+
 ## Create Debian Package
 
 A step-by-step guide to create a Debian package (deb) for emb-plus-examples

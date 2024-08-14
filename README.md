@@ -60,6 +60,7 @@ sudo apt install dh-make dpkg-dev devscripts build-essential debhelper
 ```
 Debian package generation
 ```
+source /opt/xilinx/xrt/setup.sh
 git clone --recursive https://github.com/Xilinx/emb-plus-examples
 cd emb-plus-examples
 rm -rf .git common/Vitis_Libraries/.git

@@ -77,7 +77,7 @@ The application depends on OpenCV library dev package and installing it is
 required before compilaiton.
 
 ```
-$ sudo apt install libopencv-dev
+$ sudo apt install libopencv-dev libboost-all-dev
 $ cd emb-plus-examples/simple-app/filter2d-aie
 $ make
 ```

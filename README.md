@@ -1,6 +1,6 @@
 # Embedded Plus Platform Applications
 
-The Embedded Plus platform is a combination of the Rayzen x86 and Versal Edge device. This
+The Embedded Plus platform is a combination of the Ryzen x86 and Versal Edge device. This
 repository provides examples and source code to help you get started with development on
 this platform.
 
@@ -18,6 +18,8 @@ Below is a table listing all the examples available in this repository:
 Each subfolder contains a README file that provides instructions for testing the
 corresponding sub-application on this platform.
 
+The accelerator's Vitis platform repository can be found in https://github.com/Xilinx/emb_plus_vitis_platforms .
+
 ## Getting Started
 
 To get started, follow these steps:
@@ -30,7 +32,7 @@ git clone --recursive https://github.com/Xilinx/emb-plus-examples
 
 2. Navigate to the desired sub-application folder:
 ```
-cd <sub_application_folder>
+cd simple-app/<sub_application_folder>
 ```
 
 3. Follow the instructions provided in the README file of the subfolder to test the

@@ -1,6 +1,6 @@
 /*
  * Copyright (C) 2019-2022 Xilinx, Inc
- * Copyright (C) 2022-2024 Advance Micro Devices, Inc.
+ * Copyright (C) 2022-2025 Advance Micro Devices, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -234,7 +234,7 @@ int main(int argc, char **argv) {
     std::cout << "Initializing Tiler & Stitcher.\n";
     xF::xfcvDataMovers<xF::TILER, int16_t, TILE_HEIGHT, TILE_WIDTH,
                        VECTORIZATION_FACTOR>
-        tiler(1, 1);
+        tiler(1, 1, false, 4); // tiler with burst size of 4
     xF::xfcvDataMovers<xF::STITCHER, int16_t, TILE_HEIGHT, TILE_WIDTH,
                        VECTORIZATION_FACTOR>
         stitcher;

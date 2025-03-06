@@ -66,14 +66,14 @@ source /opt/xilinx/xrt/setup.sh
 git clone --recursive https://github.com/Xilinx/emb-plus-examples
 cd emb-plus-examples
 rm -rf .git common/Vitis_Libraries/.git
-tar czvf ../emb-plus-examples_0.6.orig.tar.gz .
+tar czvf ../emb-plus-examples_1.0.orig.tar.gz .
 dpkg-buildpackage -us -uc -sa -F
 ```
 The output will be a deb package named
-'filter2d-acceleration-application_0.6-0xlnx1_all.deb', to install run
+'filter2d-acceleration-application_1.0-0xlnx1_all.deb', to install run
 ```
-sudo apt install ./filter2d-acceleration-application_0.6-0xlnx1_all.deb
+sudo apt install ./filter2d-acceleration-application_1.0-0xlnx1_all.deb
 ```
 # License
-(C) Copyright 2024, Advanced Micro Devices Inc.\
+(C) Copyright 2024 - 2025, Advanced Micro Devices Inc.\
 SPDX-License-Identifier: Apache-2.0

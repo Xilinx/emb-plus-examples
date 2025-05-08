@@ -2,10 +2,10 @@
 
 This application demonstrates the acceleration of a 2D filter using AMD hardware
 accelerators in AIE-ml. The application runs convolution of the input image on
-the AIE accelerator with a fixed filter configuration and compares the results
-with a SW implemented reference model for validation. The application is
-capable to receive any jpg input image, for simplicity the given input image is
-resized to 1080p using OpenCV APIs. The resized jpg image is converted to YUYV
+the AIE accelerator with a filter configuration chosen by the user and compares
+the results with a SW implemented reference model for validation. The application
+is capable to receive any jpg input image, for simplicity the given input image
+is resized to 1080p using OpenCV APIs. The resized jpg image is converted to YUYV
 format, the YUYV frame is fed to the hardware accelerator. Tiler and stitcher
 components in the PL act as data movers to the AIE core, while they manage the
 distribution and aggregation of image tiles and metadata across the AIE. The
@@ -52,13 +52,14 @@ $ source /opt/xilinx/xrt/setup.sh
 $ export PATH="/opt/xilinx/filter2d-aie:$PATH"
 
 # Filter2d Acceleration Example Application Usage:
-$ <Executable Name> -i [path/testimg.jpg] -u [path/user_xclbin]
+# Filter options: Horizontal-Gradient, Emboss, Edge, Blur, Identity, Horizontal-Sobel
+$ <Executable Name> <Filter> -i [path/testimg.jpg] -u [path/user_xclbin]
 
 # Use -h for usage help
 $ <Executable Name> -h
 
 # Example using default test image and default xclbin
-$ filter2D_accel_aie.elf
+$ filter2D_accel_aie.elf Edge
 ```
 
 The application performs a pixel-by-pixel comparison between the output from

@@ -39,7 +39,7 @@ ELFDIR = /opt/xilinx/filter2d-pl
 HOST_SRCS += ./src/xcl2.cpp ./src/host.cpp
 
 CXXFLAGS += -I$(XILINX_XRT)/include -I./src -I/usr/include/opencv4
-CXXFLAGS += -fmessage-length=0 -Wall -O0 -g -std=c++1y -pthread
+CXXFLAGS += -fmessage-length=0 -Wall -O0 -g -std=c++17 -pthread
 
 LDFLAGS += -L$(XILINX_XRT)/lib
 LDFLAGS += -lstdc++ -lOpenCL -lopencv_core -lopencv_imgproc -lopencv_imgcodecs

@@ -39,7 +39,7 @@ cd simple-app/<sub_application_folder>
 application on the Embedded Plus platform.
 
 4. Download the prebuilt debian packages mentioned in the respective application
-README file.   
+README file.
 [Download link to pre-built Application
 packages](https://www.sapphiretech.com/en/commercial/edge-plus-vpr_4616#Download)
 
@@ -56,7 +56,7 @@ Dependency packages required for debian package generation on emb-plus target.
 ```
 sudo apt install -y dkms
 sudo apt install -y libopencv-dev libboost-all-dev
-sudo apt install -y ./xrt_202410.2.17.326_22.04-amd64-xrt.deb
+sudo apt install -y ./xrt_202510.2.19.194_22.04-amd64-xrt.deb
 sudo apt install dh-make dpkg-dev devscripts build-essential debhelper
 # Note: xrt is a local package
 ```
@@ -66,13 +66,13 @@ source /opt/xilinx/xrt/setup.sh
 git clone --recursive https://github.com/Xilinx/emb-plus-examples
 cd emb-plus-examples
 rm -rf .git common/Vitis_Libraries/.git
-tar czvf ../emb-plus-examples_1.0.orig.tar.gz .
+tar czvf ../emb-plus-examples_1.2.orig.tar.gz .
 dpkg-buildpackage -us -uc -sa -F
 ```
 The output will be a deb package named
-'filter2d-acceleration-application_1.0-0xlnx1_all.deb', to install run
+'filter2d-acceleration-application_1.2-0xlnx1_all.deb', to install run
 ```
-sudo apt install ./filter2d-acceleration-application_1.0-0xlnx1_all.deb
+sudo apt install ./filter2d-acceleration-application_1.2-0xlnx1_all.deb
 ```
 # License
 (C) Copyright 2024 - 2025, Advanced Micro Devices Inc.\

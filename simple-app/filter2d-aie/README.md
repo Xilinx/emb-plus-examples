@@ -83,6 +83,9 @@ $ cd emb-plus-examples/simple-app/filter2d-aie
 $ make
 ```
 
+Note: This app may not build with the latest commit of Vitis_Libraries.
+Please use commit ab0dca2.
+
 # License
 
 (C) Copyright 2024 - 2025, Advanced Micro Devices Inc.\

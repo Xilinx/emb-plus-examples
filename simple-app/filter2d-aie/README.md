@@ -40,7 +40,7 @@ $ sudo apt install -y ./xrt_<version number>_22.04-amd64-xrt.deb
 $ sudo apt install ./filter2d-aie-ve2302_0.6.deb
 
 # Install host app, and OpenCV as dependency.
-$ sudo apt install -y ./filter2d-acceleration-application_1.2-0xlnx1_all.deb
+$ sudo apt install -y ./filter2d-acceleration-application_1.1-0xlnx1_all.deb
 
 ```
 
@@ -82,6 +82,9 @@ $ sudo apt install libopencv-dev libboost-all-dev
 $ cd emb-plus-examples/simple-app/filter2d-aie
 $ make
 ```
+
+Note: This app may not build with the latest commit of Vitis_Libraries.
+Please use commit ab0dca2.
 
 # License
 

@@ -1,4 +1,4 @@
-emb-plus-examples (1.2-0xlnx1) jammy; urgency=medium
+emb-plus-examples (1.1-0xlnx1) jammy; urgency=medium
 
   * Add RTP support for filter2d-aie
 

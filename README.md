@@ -72,7 +72,7 @@ dpkg-buildpackage -us -uc -sa -F
 The output will be a deb package named
 'filter2d-acceleration-application_1.1-0xlnx1_all.deb', to install run
 ```
-sudo apt install ./filter2d-acceleration-application_1.1-0xlnx1_all.deb
+sudo dpkg -i ./filter2d-acceleration-application_1.1-0xlnx1_all.deb
 ```
 # License
 (C) Copyright 2024 - 2025, Advanced Micro Devices Inc.\

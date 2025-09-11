@@ -33,14 +33,14 @@ To use this application, follow these steps:
 packages](https://www.sapphiretech.com/en/commercial/edge-plus-vpr_4616#Download)
 
 ```
-# Install 2.18 Xilinx RunTime (XRT) library
-$ sudo apt install -y ./xrt_<version number>_22.04-amd64-xrt.deb
+# Install Xilinx RunTime (XRT) library
+$ sudo dpkg -i ./xrt_<version number>_22.04-amd64-xrt.deb
 
 # Install accel firmware binary for AIE filter2D (*xclbin)
-$ sudo apt install ./filter2d-aie-ve2302_0.6.deb
+$ sudo dpkg -i ./filter2d-aie-ve2302_1.2.deb
 
 # Install host app, and OpenCV as dependency.
-$ sudo apt install -y ./filter2d-acceleration-application_1.1-0xlnx1_all.deb
+$ sudo dpkg -i ./filter2d-acceleration-application_1.1-0xlnx1_all.deb
 
 ```
 

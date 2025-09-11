@@ -31,14 +31,14 @@ Installing Application
 packages](https://www.sapphiretech.com/en/commercial/edge-plus-vpr_4616#Download)
 
 ```
-# Install 2.17 Xilinx RunTime (XRT) library
-$ sudo apt install -y ./xrt_202410.2.17.326_22.04-amd64-xrt.deb
+# Install Xilinx RunTime (XRT) library
+$ sudo dpkg -i ./xrt_<version number>_22.04-amd64-xrt.deb
 
 # Install accel firmware binary for filter2D (*xclbin)
-$ sudo apt install ./filter2d-pl-ve2302_0.5.deb
+$ sudo dpkg -i ./filter2d-pl-ve2302_1.2.deb
 
 # Install host app, and OpenCV as dependency.
-$ sudo apt install -y ./filter2d-acceleration-application_0.6-0xlnx1_all.deb
+$ sudo dpkg -i ./filter2d-acceleration-application_1.1-0xlnx1_all.deb
 
 ```
 

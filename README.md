@@ -56,7 +56,7 @@ Dependency packages required for debian package generation on emb-plus target.
 ```
 sudo apt install -y dkms
 sudo apt install -y libopencv-dev libboost-all-dev
-sudo dpkg -i ./xrt_202510.2.19.214_22.04-amd64-xrt.deb
+sudo apt install -y ./xrt_202510.2.19.214_22.04-amd64-xrt.deb
 sudo apt install dh-make dpkg-dev devscripts build-essential debhelper
 # Note: xrt is a local package
 ```
@@ -72,7 +72,7 @@ dpkg-buildpackage -us -uc -sa -F
 The output will be a deb package named
 'filter2d-acceleration-application_1.1-0xlnx1_all.deb', to install run
 ```
-sudo dpkg -i ./filter2d-acceleration-application_1.1-0xlnx1_all.deb
+sudo apt install -y ./filter2d-acceleration-application_1.1-0xlnx1_all.deb
 ```
 # License
 (C) Copyright 2024 - 2025, Advanced Micro Devices Inc.\

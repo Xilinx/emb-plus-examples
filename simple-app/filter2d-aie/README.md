@@ -34,7 +34,7 @@ packages](https://www.sapphiretech.com/en/commercial/edge-plus-vpr_4616#Download
 
 ```
 # Install Xilinx RunTime (XRT) library
-$ sudo dpkg -i ./xrt_<version number>_22.04-amd64-xrt.deb
+$ sudo dpkg -i ./xrt_202510.2.19.214_22.04-amd64-xrt.deb
 
 # Install accel firmware binary for AIE filter2D (*xclbin)
 $ sudo dpkg -i ./filter2d-aie-ve2302_1.2.deb

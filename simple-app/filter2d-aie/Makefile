@@ -39,11 +39,11 @@ EXE_FILE = filter2D_accel_aie.elf
 HOST_SRCS +=  ./src/host.cpp
 HOST_OBJ += host.o
 
-CXXFLAGS += -I$(XILINX_XRT)/include -I./src -I/usr/include/opencv4 -I$(XFLIB_DIR)/L1/include/aie
+CXXFLAGS += -I$(XILINX_XRT)/include -I./src -I/usr/include/opencv4 -I$(XFLIB_DIR)/L1/include/aie $(shell pkg-config --cflags gstreamer-1.0 gstreamer-app-1.0)
 CXXFLAGS += -fmessage-length=0 -Wall -O0 -g -std=c++17 -pthread
 
 LDFLAGS += -L$(XILINX_XRT)/lib -L$(XFLIB_DIR)/L1/lib/sw/x86/
-LDFLAGS += -lstdc++ -lsmartTilerStitcher -lxrt_core -lxrt_coreutil -luuid -lOpenCL -lopencv_core -lopencv_imgproc -lopencv_imgcodecs
+LDFLAGS += -lstdc++ -lsmartTilerStitcher -lxrt_core -lxrt_coreutil -luuid -lOpenCL -lopencv_core -lopencv_imgproc -lopencv_imgcodecs -lopencv_videoio $(shell pkg-config --libs gstreamer-1.0 gstreamer-app-1.0)
 
 ############################## Setting Rules for Host (Building Host Executable) ##############################
 .DEFAULT_GOAL := all

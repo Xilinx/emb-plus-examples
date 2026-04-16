@@ -1,3 +1,2 @@
-simple-app/filter2d-pl/filter2D_accel_pl.elf /opt/xilinx/filter2d-pl/
-simple-app/filter2d-aie/filter2D_accel_aie.elf /opt/xilinx/filter2d-aie/
+simple-app/filter2d/filter2D_accel.elf /opt/xilinx/filter2d/
 common/Vitis_Libraries/vision/data/HD.jpg /opt/xilinx/testimg/

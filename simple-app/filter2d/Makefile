@@ -1,5 +1,5 @@
 # Copyright (C) 2019-2022 Xilinx, Inc.
-# Copyright (C) 2022-2024 Advance Micro Devices, Inc.
+# Copyright (C) 2022-2026 Advanced Micro Devices, Inc.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -34,22 +34,27 @@ ECHO:= @echo
 
 ########################## Setting up Host Variables ##########################
 
-EXE_FILE = filter2D_accel_pl.elf
-ELFDIR = /opt/xilinx/filter2d-pl
-HOST_SRCS += ./src/xcl2.cpp ./src/host.cpp
+XFLIB_DIR = ../../common/Vitis_Libraries/vision
+EXE_FILE = filter2D_accel.elf
+ELFDIR = /opt/xilinx/filter2d
+HOST_SRCS +=  ./src/host.cpp ./src/xcl2.cpp
+HOST_OBJ += host.o xcl2.o
 
-CXXFLAGS += -I$(XILINX_XRT)/include -I./src -I/usr/include/opencv4
+CXXFLAGS += -I$(XILINX_XRT)/include -I./src -I/usr/include/opencv4 -I$(XFLIB_DIR)/L1/include/aie $(shell pkg-config --cflags gstreamer-1.0 gstreamer-app-1.0)
 CXXFLAGS += -fmessage-length=0 -Wall -O0 -g -std=c++17 -pthread
 
-LDFLAGS += -L$(XILINX_XRT)/lib
-LDFLAGS += -lstdc++ -lOpenCL -lopencv_core -lopencv_imgproc -lopencv_imgcodecs
+LDFLAGS += -L$(XILINX_XRT)/lib -L$(XFLIB_DIR)/L1/lib/sw/x86/
+LDFLAGS += -lstdc++ -lsmartTilerStitcher -lxrt_core -lxrt_coreutil -luuid -lOpenCL -lopencv_core -lopencv_imgproc -lopencv_imgcodecs -lopencv_videoio $(shell pkg-config --libs gstreamer-1.0 gstreamer-app-1.0)
 
 ############################## Setting Rules for Host (Building Host Executable) ##############################
 .DEFAULT_GOAL := all
 
 all: check_xrt $(EXE_FILE)
 
-$(EXE_FILE): $(HOST_SRCS)
+%.o: ./src/%.cpp
+	$(CXX) $(CXXFLAGS) -o $@ -c $<
+
+$(EXE_FILE): $(HOST_OBJ)
 	$(CXX) -o $@ $^ $(CXXFLAGS) $(LDFLAGS)
 
 check_xrt:
@@ -57,7 +62,7 @@ ifeq (,$(wildcard $(XILINX_XRT)/lib/libxilinxopencl.so))
 	@echo "Cannot locate XRT installation. Please set XILINX_XRT variable." && false
 endif
 
-############################## Setting Rules for installing target binaries ##############################
+# Install target
 install: $(EXE_FILE)
 	install -d $(ELFDIR)
 	install -m 0755 $(EXE_FILE) $(ELFDIR)
@@ -66,5 +71,5 @@ install: $(EXE_FILE)
 
 .PHONY: clean
 clean:
-	-$(RMDIR) $(EXE_FILE)
+	-$(RMDIR) $(EXE_FILE) $(HOST_OBJ) *jpg
 

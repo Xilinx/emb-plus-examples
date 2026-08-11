@@ -12,8 +12,7 @@ Below is a table listing all the examples available in this repository:
 
 | Example Name       | Description                              |
 |--------------------|------------------------------------------|
-| filter2d-pl        | Accelerator in PL logic                  |
-| filter2d-aie       | Accelerator in AIE                       |
+| filter2d           | Accelerator in PL or AIE                 |
 
 Each subfolder contains a README file that provides instructions for testing the
 corresponding sub-application on this platform.
@@ -56,7 +55,7 @@ Dependency packages required for debian package generation on emb-plus target.
 ```
 sudo apt install -y dkms
 sudo apt install -y libopencv-dev libboost-all-dev
-sudo apt install -y ./xrt_202510.2.19.214_22.04-amd64-xrt.deb
+sudo apt install -y ./xrt_202620.2.26.0_22.04-amd64-xrt.deb
 sudo apt install dh-make dpkg-dev devscripts build-essential debhelper
 # Note: xrt is a local package
 ```
@@ -66,14 +65,14 @@ source /opt/xilinx/xrt/setup.sh
 git clone --recursive https://github.com/Xilinx/emb-plus-examples
 cd emb-plus-examples
 rm -rf .git common/Vitis_Libraries/.git
-tar czvf ../emb-plus-examples_1.1.orig.tar.gz .
+tar czvf ../emb-plus-examples_2.0.orig.tar.gz .
 dpkg-buildpackage -us -uc -sa -F
 ```
 The output will be a deb package named
-'filter2d-acceleration-application_1.1-0xlnx1_all.deb', to install run
+'filter2d-acceleration-application_2.0-0xlnx1_all.deb', to install run
 ```
-sudo apt install -y ./filter2d-acceleration-application_1.1-0xlnx1_all.deb
+sudo apt install -y ./filter2d-acceleration-application_2.0-0xlnx1_all.deb
 ```
 # License
-(C) Copyright 2024 - 2025, Advanced Micro Devices Inc.\
+(C) Copyright 2024 - 2026, Advanced Micro Devices Inc.\
 SPDX-License-Identifier: Apache-2.0

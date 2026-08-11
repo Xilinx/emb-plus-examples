@@ -4,7 +4,7 @@ Upstream-Contact: https://forums.xilinx.com
 Source: https://github.com/Xilinx/emb-plus-examples
 
 Files: *
-Copyright: 2024 Advanced Micro Devices, Inc.
+Copyright: 2024 - 2026 Advanced Micro Devices, Inc.
 License: Apache-2.0
 
   Licensed under the Apache License, Version 2.0 (the "License");

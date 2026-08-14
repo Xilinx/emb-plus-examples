@@ -55,7 +55,7 @@ Dependency packages required for debian package generation on emb-plus target.
 ```
 sudo apt install -y dkms
 sudo apt install -y libopencv-dev libboost-all-dev
-sudo apt install -y ./xrt_202620.2.26.0_22.04-amd64-xrt.deb
+sudo apt install -y ./xrt_202610.2.23.243_22.04-amd64-xrt.deb
 sudo apt install dh-make dpkg-dev devscripts build-essential debhelper
 # Note: xrt is a local package
 ```

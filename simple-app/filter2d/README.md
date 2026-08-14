@@ -49,7 +49,7 @@ packages](https://www.sapphiretech.com/en/commercial/edge-plus-vpr_4616#Download
 
 ```
 # Install Xilinx RunTime (XRT) library
-$ sudo apt install -y ./xrt_202620.2.26.0_22.04-amd64-xrt.deb
+$ sudo apt install -y ./xrt_202610.2.23.243_22.04-amd64-xrt.deb
 
 # Install accel firmware binary for filter2D (*xclbin). It carries both the AIE
 # graph and the PL accelerator, so -m selects between them at runtime.
@@ -67,6 +67,16 @@ $ sudo reboot
 ```
 
 ## Test application
+
+Before running the application for the first time, reload the xocl driver
+with polling mode enabled (one-time setup per boot). This workaround is
+required for XRT version 2.23.243 to prevent a race condition for the interrupt
+controller.
+
+```
+$ sudo rmmod xocl
+$ sudo modprobe xocl poll_mode=1
+```
 
 ```
 $ source /opt/xilinx/xrt/setup.sh

@@ -28,6 +28,7 @@
 #include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <cmath>
 #include <experimental/xrt_kernel.h>
 #include <experimental/xrt_graph.h>
 #include <common/xf_aie_sw_utils.hpp>
@@ -68,7 +69,9 @@ float kData[][9] = {
     {-1, -1, -1, 0, 0, 0, 1, 1, 1},     // Horizontal-Gradient
     {-2, -1, 0, -1, 1, 1, 0, 1, 2},     // Emboss
     {0, 1, 0, 1, -4, 1, 0, 1, 0},       // Edge
-    {1, 1, 1, 1, -7, 1, 1, 1, 1},       // Blur
+    {0.0625, 0.125, 0.0625,             // Blur (3x3 Gaussian, sums to 1)
+     0.125,  0.25,  0.125,
+     0.0625, 0.125, 0.0625},
     {0, 0, 0, 0, 1, 0, 0, 0, 0},        // Identity
     {1, 2, 1, 0, 0, 0, -1, -2, -1}};    // Horizontal-Sobel
 
@@ -108,9 +111,14 @@ enum Mode { MODE_AIE, MODE_PL };
 #define FILTER_WIDTH 3
 #define FOURCC 0x56595559 /* YUYV Format */
 
-void matrixDeconstructor(float matrix[9], short int Darray[]) {
+/* PL applies the kernel as integers and right-shifts the accumulator by
+   kShift, so fractional coefficients have to be scaled up here first. The AIE
+   kernel and run_ref use the float coefficients directly and need no shift. */
+const int kShift[] = {0, 0, 0, 4, 0, 0};
+
+void matrixDeconstructor(float matrix[9], short int Darray[], int shift) {
     for (int i = 0; i < FILTER_HEIGHT * FILTER_WIDTH; i++)
-        Darray[i] = (short int)matrix[i];
+        Darray[i] = (short int)lrintf(matrix[i] * (1 << shift));
 }
 
 void printFilterOptions(void) {
@@ -750,7 +758,7 @@ static int run_pl_pipeline(const std::string &userXclbin, enum Filter Ftype,
                                     sizeof(short int) * 9, NULL, &err);
 
     /* Upload filter coefficients (once) */
-    matrixDeconstructor(kData[(int)Ftype], Darray);
+    matrixDeconstructor(kData[(int)Ftype], Darray, kShift[(int)Ftype]);
     q.enqueueWriteBuffer(kernelFilterToDevice, CL_TRUE, 0,
                          sizeof(short int) * 9, (short int *)Darray);
 
@@ -763,6 +771,7 @@ static int run_pl_pipeline(const std::string &userXclbin, enum Filter Ftype,
     krnl.setArg(5, FOURCC); // fourcc in
     krnl.setArg(6, FOURCC); // fourcc out
     krnl.setArg(7, (uint32_t)g_chromaMode);
+    krnl.setArg(8, (uint32_t)kShift[(int)Ftype]);
 
     /* Host-side frame buffers */
     std::vector<uint8_t> inBuf(frameBufSize);
@@ -1208,7 +1217,7 @@ int main(int argc, char **argv) {
                                  (height * width * chan),
                                  (unsigned short *)srcImageR.data);
 
-            matrixDeconstructor(kData[(int)Ftype], Darray);
+            matrixDeconstructor(kData[(int)Ftype], Darray, kShift[(int)Ftype]);
             q.enqueueWriteBuffer(kernelFilterToDevice, CL_TRUE, 0,
                                  sizeof(short int) * 9, (short int *)Darray);
 
@@ -1220,6 +1229,7 @@ int main(int argc, char **argv) {
             krnl.setArg(5, FOURCC);
             krnl.setArg(6, FOURCC);
             krnl.setArg(7, (uint32_t)g_chromaMode);
+            krnl.setArg(8, (uint32_t)kShift[(int)Ftype]);
 
             cl_ulong start = 0, end = 0;
             cl::Event eventSp;

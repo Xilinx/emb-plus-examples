@@ -78,6 +78,29 @@ const char *filterArgs[] = {
 
 enum Filter { HGRAD, EMBOSS, EDGE, BLUR, IDENTITY, HSOBEL, MAX_FILTER_NUM };
 
+/* Chroma handling. Values must match the PL kernel's chroma_mode and the AIE
+   kernel's POS_CHROMA_MODE coefficient slot. */
+#define CHROMA_PASSTHROUGH 0
+#define CHROMA_NEUTRAL 1
+#define CHROMA_NEUTRAL_VALUE 128
+/* Slot in the 16-entry AIE coefficient buffer that carries the mode. The 3x3
+   kernel occupies 0..11, so this needs no change to the graph interface. */
+#define POS_CHROMA_MODE 12
+
+/* A zero-sum kernel drives luma to an edge magnitude, and the scene's original
+   chroma against that produces a misleading hue -- a yellow subject renders
+   red. Neutralise chroma for those and leave it alone for the rest, where flat
+   regions keep their luma and the colour is still meaningful. */
+int defaultChromaMode(enum Filter Ftype) {
+    float sum = 0;
+    for (int i = 0; i < 9; i++) sum += kData[(int)Ftype][i];
+    return (0.0f == sum) ? CHROMA_NEUTRAL : CHROMA_PASSTHROUGH;
+}
+
+/* Set once in main from the preset default or the --chroma override, then read
+   by the AIE, PL and reference paths. */
+static int g_chromaMode = CHROMA_PASSTHROUGH;
+
 enum Mode { MODE_AIE, MODE_PL };
 
 /* PL filter coefficients (3x3 matrix form needed for PL kernel args) */
@@ -120,6 +143,9 @@ void printHelp(void) {
         << "  -m  Set acceleration mode: aie (default) or pl" << std::endl
         << "  -t  Duration in seconds for camera capture (default: 30)" << std::endl
         << "  -d  Display output on screen instead of saving to file" << std::endl
+        << "  -k  Chroma handling: auto (default), keep, or grey." << std::endl
+        << "      auto greys the chroma for zero-sum kernels, whose luma is an" << std::endl
+        << "      edge magnitude, and keeps it for the rest." << std::endl
         << std::endl
         << "Example with default image (AIE):\tfilter2D_accel.elf Edge"
         << std::endl
@@ -143,7 +169,7 @@ void printHelp(void) {
 
 /* SW equivalent of the Convolution algorithm implemented on AIE */
 void run_ref(uint8_t *srcImageR, uint8_t *dstRefImage, float coeff[9],
-             int16_t height, int16_t width) {
+             int16_t height, int16_t width, int chromaMode) {
     float window[9];
 
     width *= 2;
@@ -153,7 +179,8 @@ void run_ref(uint8_t *srcImageR, uint8_t *dstRefImage, float coeff[9],
         int col = i % width;
 
         if (col % 2) {
-            dstRefImage[i] = srcImageR[i];
+            dstRefImage[i] = (CHROMA_NEUTRAL == chromaMode) ? CHROMA_NEUTRAL_VALUE
+                                                            : srcImageR[i];
             continue;
         }
 
@@ -536,6 +563,7 @@ static int run_aie_pipeline(const std::string &userXclbin, enum Filter Ftype,
     /* Filter Coefficients */
     std::array<int16_t, 16> coeffData;
     coeffData = float2fixed_coeff<10, 16>(kData[(int)Ftype]);
+    coeffData[POS_CHROMA_MODE] = (int16_t)g_chromaMode;
     xrt::bo param_buffer = xrt::bo(xF::gpDhdl, 16 * sizeof(short int), 0, 0);
     memcpy(param_buffer.map<short int*>(), &coeffData[0], 16 * sizeof(short int));
     param_buffer.sync(XCL_BO_SYNC_BO_TO_DEVICE);
@@ -734,6 +762,7 @@ static int run_pl_pipeline(const std::string &userXclbin, enum Filter Ftype,
     krnl.setArg(4, width);
     krnl.setArg(5, FOURCC); // fourcc in
     krnl.setArg(6, FOURCC); // fourcc out
+    krnl.setArg(7, (uint32_t)g_chromaMode);
 
     /* Host-side frame buffers */
     std::vector<uint8_t> inBuf(frameBufSize);
@@ -824,8 +853,9 @@ int main(int argc, char **argv) {
     bool displayMode = false;
     int cameraDevice = 0;
     int durationSeconds = 0; // 0 means use default (30s for camera+file, unlimited otherwise)
+    std::string chromaArg = "auto";
 
-    if (argc < 2 || argc > 12) {
+    if (argc < 2 || argc > 14) {
         std::cerr << "Invalid number for arguments passed, calling help menu."
                   << std::endl;
         printHelp();
@@ -871,6 +901,14 @@ int main(int argc, char **argv) {
                 return -1;
             }
             i += 2;
+        } else if (std::string(argv[i]) == "-k" && i + 1 < argc) {
+            chromaArg = argv[i + 1];
+            if (chromaArg != "auto" && chromaArg != "keep" && chromaArg != "grey") {
+                std::cerr << "Invalid chroma option '" << chromaArg
+                          << "'. Use 'auto', 'keep' or 'grey'." << std::endl;
+                return -1;
+            }
+            i += 2;
         } else if (std::string(argv[i]) == "-t" && i + 1 < argc) {
             durationSeconds = std::atoi(argv[i + 1]);
             if (durationSeconds <= 0) {
@@ -897,6 +935,12 @@ int main(int argc, char **argv) {
     }
 
     Ftype = getCoeffString(arg);
+    g_chromaMode = (chromaArg == "auto")   ? defaultChromaMode(Ftype)
+                   : (chromaArg == "grey") ? CHROMA_NEUTRAL
+                                           : CHROMA_PASSTHROUGH;
+    std::cout << "Chroma: "
+              << ((CHROMA_NEUTRAL == g_chromaMode) ? "neutral grey" : "passed through")
+              << std::endl;
 
     /* Set default xclbin based on mode if user didn't specify one */
     if (!userXclbinSet) {
@@ -1116,7 +1160,8 @@ int main(int argc, char **argv) {
         uint8_t *dataRefOut = (uint8_t *)std::malloc(srcImageR.total() * srcImageR.elemSize());
         srcData_vec.assign(height * width * 2, 0);
         memcpy(srcData_vec.data(), srcImageR.data, srcImageR.total() * srcImageR.elemSize());
-        run_ref((uint8_t *)srcData_vec.data(), dataRefOut, kData[(int)Ftype], srcImageR.rows, srcImageR.cols);
+        run_ref((uint8_t *)srcData_vec.data(), dataRefOut, kData[(int)Ftype], srcImageR.rows, srcImageR.cols,
+                g_chromaMode);
         cv::Mat ref(srcImageR.rows, srcImageR.cols, srcImageR.type(), dataRefOut);
         cv::cvtColor(ref, temp1, cv::COLOR_YUV2BGR_YUYV);
         imwrite("sw_ref.jpg", temp1);
@@ -1174,6 +1219,7 @@ int main(int argc, char **argv) {
             krnl.setArg(4, width);
             krnl.setArg(5, FOURCC);
             krnl.setArg(6, FOURCC);
+            krnl.setArg(7, (uint32_t)g_chromaMode);
 
             cl_ulong start = 0, end = 0;
             cl::Event eventSp;
@@ -1205,6 +1251,7 @@ int main(int argc, char **argv) {
             /* Filter Coefficients */
             std::array<int16_t, 16> coeffData;
             coeffData = float2fixed_coeff<10, 16>(kData[(int)Ftype]);
+            coeffData[POS_CHROMA_MODE] = (int16_t)g_chromaMode;
             xrt::bo param_buffer  = xrt::bo(xF::gpDhdl, 16 * sizeof(short int), 0, 0);
             memcpy(param_buffer.map<short int*>(), &coeffData[0],  16 * sizeof(short int));
             param_buffer.sync(XCL_BO_SYNC_BO_TO_DEVICE);

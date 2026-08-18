@@ -171,7 +171,10 @@ void run_ref(uint8_t *srcImageR, uint8_t *dstRefImage, float coeff[9],
         float s = 0;
         for (int j = 0; j < 9; j++)
             s += window[j] * coeff[j];
-        dstRefImage[i] = s;
+
+        /* Saturate: a zero-sum kernel gives negative results, and the
+         * float->uint8_t conversion wraps them. PL saturates. */
+        dstRefImage[i] = static_cast<uint8_t>(std::min(255.0f, std::max(0.0f, s)));
     }
 }
 

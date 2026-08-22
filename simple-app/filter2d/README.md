@@ -51,11 +51,9 @@ packages](https://www.sapphiretech.com/en/commercial/edge-plus-vpr_4616#Download
 # Install Xilinx RunTime (XRT) library
 $ sudo apt install -y ./xrt_202620.2.26.0_22.04-amd64-xrt.deb
 
-# Install accel firmware binary for filter2D AIE (*xclbin)
-$ sudo apt install -y ./filter2d-aie-ve2302_2.0.deb
-
-# Install accel firmware binary for filter2D PL (*xclbin)
-$ sudo apt install -y ./filter2d-pl-ve2302_2.0.deb
+# Install accel firmware binary for filter2D (*xclbin). It carries both the AIE
+# graph and the PL accelerator, so -m selects between them at runtime.
+$ sudo apt install -y ./filter2d-ve2302_2.0.deb
 
 # Install host app, and OpenCV as dependency.
 $ sudo apt install -y ./filter2d-acceleration-application_2.0-0xlnx1_all.deb
@@ -106,7 +104,7 @@ $ <Executable Name> -h
 # Example using default test image and default xclbin (AIE mode)
 $ filter2D_accel.elf Edge
 
-# Example with PL mode
+# Example with PL mode. Same xclbin -- no reprogramming between the two.
 $ filter2D_accel.elf Edge -m pl
 
 # Example with custom image
@@ -213,6 +211,10 @@ Relevant when changing the kernels or adding a preset.
   `.xclbin` must be built and deployed as a pair; a mismatch fails at `setArg`.
 - **The PL chroma stage reads its input stream in both modes.** It sits inside a
   dataflow region, where an unconsumed stream stalls the pipeline.
+- **The shipped xclbin is the combined one**, from the `filter2d_combined`
+  overlay, so `-m` switches path without reprogramming. The two runtimes never
+  coexist: the OpenCL context is created only on the PL branch and
+  `xF::deviceInit` only on the AIE branch.
 
 ### Image mode
 

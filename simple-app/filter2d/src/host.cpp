@@ -951,15 +951,13 @@ int main(int argc, char **argv) {
               << ((CHROMA_NEUTRAL == g_chromaMode) ? "neutral grey" : "passed through")
               << std::endl;
 
-    /* Set default xclbin based on mode if user didn't specify one */
+    /* Default to the combined xclbin from the filter2d_combined overlay, which
+       carries both the AIE graph and the PL accelerator, so -m selects a path
+       without changing the file. The per-mode xclbins built by filter2d_aie and
+       filter2d_pl still work -- pass one with -u. */
     if (!userXclbinSet) {
-        if (mode == MODE_PL) {
-            userXclbin = "/opt/xilinx/firmware/emb_plus/ve2302_pcie_qdma/base/test/"
-                         "filter2d_pl.xclbin";
-        } else {
-            userXclbin = "/opt/xilinx/firmware/emb_plus/ve2302_pcie_qdma/base/test/"
-                         "filter2d_aie.xclbin";
-        }
+        userXclbin = "/opt/xilinx/firmware/emb_plus/ve2302_pcie_xdma/base/test/"
+                     "filter2d.xclbin";
     }
 
     std::cout << "Mode: " << (mode == MODE_PL ? "PL" : "AIE") << std::endl;

@@ -372,17 +372,30 @@ static double gst_query_fps(GstAppSink *sink) {
 
 /* Thread-safe bounded queue of decoded host frames. A dedicated decode thread
    (producer) fills it while the compute loop (consumer) drains it, decoupling
-   H.264 decode jitter from AIE processing. */
+   H.264 decode jitter from AIE processing. The pool holds retired frame
+   buffers, reused so the decode thread does not allocate and zero-fill a full
+   frame every iteration. */
 struct FrameQueue {
     std::mutex m;
     std::condition_variable cv_notfull;
     std::condition_variable cv_notempty;
     std::queue<std::vector<uint8_t>> q;
+    std::vector<std::vector<uint8_t>> pool;
     size_t capacity;
+    size_t frameSize;
     bool producer_done = false;
     bool aborted = false;
 
-    explicit FrameQueue(size_t cap) : capacity(cap) {}
+    FrameQueue(size_t cap, size_t frameSz) : capacity(cap), frameSize(frameSz) {}
+
+    /* Producer: take a retired buffer if one is available, else allocate. */
+    std::vector<uint8_t> acquire() {
+        std::lock_guard<std::mutex> lk(m);
+        if (pool.empty()) return std::vector<uint8_t>(frameSize);
+        std::vector<uint8_t> buf = std::move(pool.back());
+        pool.pop_back();
+        return buf;
+    }
 
     /* Producer: blocks while full. Returns false if the consumer aborted. */
     bool push(std::vector<uint8_t> &&frame) {
@@ -399,6 +412,9 @@ struct FrameQueue {
         std::unique_lock<std::mutex> lk(m);
         cv_notempty.wait(lk, [&] { return !q.empty() || producer_done || aborted; });
         if (aborted || q.empty()) return false;
+        /* Retire the caller's previous buffer for the producer to refill. */
+        if (out.size() == frameSize && pool.size() < capacity)
+            pool.push_back(std::move(out));
         out = std::move(q.front());
         q.pop();
         cv_notfull.notify_one();
@@ -421,6 +437,11 @@ struct FrameQueue {
     }
 };
 
+/* appsrc buffer cap. A 1920x1080 YUY2 frame is ~4 MiB, so 16 MiB holds four
+   of them: enough slack to ride out an encoder or sink stall without the
+   queue growing without bound. */
+#define APPSRC_MAX_BYTES 16777216
+
 /* Build the appsrc -> encode/display GStreamer pipeline string shared by both
    the AIE and PL processing paths. */
 static std::string build_encode_pipeline(double fps, bool displayMode,
@@ -437,7 +458,8 @@ static std::string build_encode_pipeline(double fps, bool displayMode,
            backpressures the loop, pacing processing to the source framerate. */
         const char *queueLeak = isCamera ? " leaky=downstream" : "";
         return
-            "appsrc name=src is-live=true format=time block=true"
+            "appsrc name=src is-live=true format=time block=true max-bytes=" +
+            std::to_string(APPSRC_MAX_BYTES) +
             " caps=video/x-raw,format=YUY2,width=" + std::to_string(RESIZE_WIDTH) +
             ",height=" + std::to_string(RESIZE_HEIGHT) +
             ",framerate=" + std::to_string(fps_int) + "/1"
@@ -445,7 +467,8 @@ static std::string build_encode_pipeline(double fps, bool displayMode,
             " ! videoconvert ! vaapisink sync=" + sinkSync;
     }
     return
-        "appsrc name=src is-live=true format=time block=true"
+        "appsrc name=src is-live=true format=time block=true max-bytes=" +
+        std::to_string(APPSRC_MAX_BYTES) +
         " caps=video/x-raw,format=YUY2,width=" + std::to_string(RESIZE_WIDTH) +
         ",height=" + std::to_string(RESIZE_HEIGHT) +
         ",framerate=" + std::to_string(fps_int) + "/1"
@@ -475,13 +498,12 @@ static GstElement *create_encode_pipeline(double fps, bool displayMode,
 /* Copy one decoded GstSample into a host frame buffer and push it onto the
    queue, then release the sample. Used to seed the queue with the first frame
    the caller already pulled. */
-static void seed_frame_queue(FrameQueue &frameQueue, GstSample *first_sample,
-                             size_t frameBufSize) {
+static void seed_frame_queue(FrameQueue &frameQueue, GstSample *first_sample) {
     GstBuffer *buf = gst_sample_get_buffer(first_sample);
     GstMapInfo map;
-    std::vector<uint8_t> frame(frameBufSize);
+    std::vector<uint8_t> frame = frameQueue.acquire();
     if (gst_buffer_map(buf, &map, GST_MAP_READ)) {
-        memcpy(frame.data(), map.data, std::min(frameBufSize, (size_t)map.size));
+        memcpy(frame.data(), map.data, std::min(frame.size(), (size_t)map.size));
         gst_buffer_unmap(buf, &map);
     }
     gst_sample_unref(first_sample);
@@ -491,12 +513,11 @@ static void seed_frame_queue(FrameQueue &frameQueue, GstSample *first_sample,
 /* Launch the producer thread that continuously decodes frames from appsink into
    the bounded queue until EOS, error, or shutdown. */
 static std::thread start_decode_thread(GstAppSink *appsink,
-                                       FrameQueue &frameQueue,
-                                       size_t frameBufSize) {
-    return std::thread([appsink, &frameQueue, frameBufSize]() {
+                                       FrameQueue &frameQueue) {
+    return std::thread([appsink, &frameQueue]() {
         while (g_running) {
-            std::vector<uint8_t> frame(frameBufSize);
-            if (!gst_pull_frame(appsink, frame.data(), frameBufSize)) break;
+            std::vector<uint8_t> frame = frameQueue.acquire();
+            if (!gst_pull_frame(appsink, frame.data(), frame.size())) break;
             if (!frameQueue.push(std::move(frame))) break;
         }
         frameQueue.mark_producer_done();
@@ -624,13 +645,13 @@ static int run_aie_pipeline(const std::string &userXclbin, enum Filter Ftype,
     /* Decode/compute overlap: a dedicated decode thread fills a bounded
        queue so H.264 decode jitter is absorbed and the AIE never stalls
        waiting on the decoder. */
-    FrameQueue frameQueue(16);
+    FrameQueue frameQueue(16, frameBufSize);
 
     /* Seed the queue with the first frame already pulled by the caller. */
-    seed_frame_queue(frameQueue, first_sample, frameBufSize);
+    seed_frame_queue(frameQueue, first_sample);
 
     /* Producer: continuously decode subsequent frames into the queue. */
-    std::thread decodeThread = start_decode_thread(appsink, frameQueue, frameBufSize);
+    std::thread decodeThread = start_decode_thread(appsink, frameQueue);
 
     /* Pipelined double-buffer loop */
     int cur = 0;
@@ -731,8 +752,18 @@ static int run_pl_pipeline(const std::string &userXclbin, enum Filter Ftype,
     cl::Device device = devices[0];
     cl::Context context(device);
 
-    /* create the command queue */
-    cl::CommandQueue q(context, device, CL_QUEUE_PROFILING_ENABLE, &err);
+    /* Out-of-order queue so an upload, a kernel and a readback belonging to
+       different frames can be in flight at once; ordering within one frame is
+       enforced by explicit event dependencies. */
+    cl::CommandQueue q(context, device,
+                       CL_QUEUE_OUT_OF_ORDER_EXEC_MODE_ENABLE |
+                           CL_QUEUE_PROFILING_ENABLE,
+                       &err);
+    if (err != CL_SUCCESS) {
+        std::cout << "Out-of-order queue unavailable (" << err
+                  << "), falling back to in-order" << std::endl;
+        q = cl::CommandQueue(context, device, CL_QUEUE_PROFILING_ENABLE, &err);
+    }
     std::cout << "create command queue " << err << std::endl;
 
     /* Program Kernel */
@@ -741,7 +772,11 @@ static int run_pl_pipeline(const std::string &userXclbin, enum Filter Ftype,
     cl::Program::Binaries bins{{binaryFile.data(), binaryFile.size()}};
     devices.resize(1);
     cl::Program program(context, devices, bins);
-    cl::Kernel krnl(program, "filter2d_pl_accel", &err);
+    /* One kernel object per ping-pong buffer: each holds its own buffer args,
+       so two frames can be in flight without racing on setArg(). */
+    cl::Kernel krnl[2];
+    for (int i = 0; i < 2 && !err; i++)
+        krnl[i] = cl::Kernel(program, "filter2d_pl_accel", &err);
     if (err) {
         std::cerr << "Failed to program kernel" << std::endl;
         gst_sample_unref(first_sample);
@@ -750,10 +785,15 @@ static int run_pl_pipeline(const std::string &userXclbin, enum Filter Ftype,
         return -1;
     }
 
-    /* Allocate Buffers in Global Memory */
+    /* Allocate double-buffered (ping-pong) buffers in global memory */
     std::cout << "Allocate buffer in global memory" << std::endl;
-    cl::Buffer imageToDevice(context, CL_MEM_READ_ONLY, frameBufSize, NULL, &err);
-    cl::Buffer imageFromDevice(context, CL_MEM_WRITE_ONLY, frameBufSize, NULL, &err);
+    cl::Buffer imageToDevice[2], imageFromDevice[2];
+    for (int i = 0; i < 2; i++) {
+        imageToDevice[i] =
+            cl::Buffer(context, CL_MEM_READ_ONLY, frameBufSize, NULL, &err);
+        imageFromDevice[i] =
+            cl::Buffer(context, CL_MEM_WRITE_ONLY, frameBufSize, NULL, &err);
+    }
     cl::Buffer kernelFilterToDevice(context, CL_MEM_READ_ONLY,
                                     sizeof(short int) * 9, NULL, &err);
 
@@ -763,19 +803,23 @@ static int run_pl_pipeline(const std::string &userXclbin, enum Filter Ftype,
                          sizeof(short int) * 9, (short int *)Darray);
 
     /* Set the kernel arguments that don't change per frame */
-    krnl.setArg(0, imageToDevice);
-    krnl.setArg(1, imageFromDevice);
-    krnl.setArg(2, kernelFilterToDevice);
-    krnl.setArg(3, height);
-    krnl.setArg(4, width);
-    krnl.setArg(5, FOURCC); // fourcc in
-    krnl.setArg(6, FOURCC); // fourcc out
-    krnl.setArg(7, (uint32_t)g_chromaMode);
-    krnl.setArg(8, (uint32_t)kShift[(int)Ftype]);
+    for (int i = 0; i < 2; i++) {
+        krnl[i].setArg(0, imageToDevice[i]);
+        krnl[i].setArg(1, imageFromDevice[i]);
+        krnl[i].setArg(2, kernelFilterToDevice);
+        krnl[i].setArg(3, height);
+        krnl[i].setArg(4, width);
+        krnl[i].setArg(5, FOURCC); // fourcc in
+        krnl[i].setArg(6, FOURCC); // fourcc out
+        krnl[i].setArg(7, (uint32_t)g_chromaMode);
+        krnl[i].setArg(8, (uint32_t)kShift[(int)Ftype]);
+    }
 
-    /* Host-side frame buffers */
-    std::vector<uint8_t> inBuf(frameBufSize);
-    std::vector<uint8_t> outBuf(frameBufSize);
+    /* Host-side readback buffers, one per ping-pong buffer. Input frames go to
+       the device straight out of the decode queue's buffer, with no intermediate
+       copy. */
+    std::vector<uint8_t> outBuf[2] = {std::vector<uint8_t>(frameBufSize),
+                                      std::vector<uint8_t>(frameBufSize)};
 
     /* Build encode/display pipeline */
     GstElement *enc_src_elem = nullptr;
@@ -798,36 +842,50 @@ static int run_pl_pipeline(const std::string &userXclbin, enum Filter Ftype,
     /* Decode/compute overlap: a dedicated decode thread fills a bounded queue
        so H.264 decode jitter is absorbed and the PL kernel never stalls waiting
        on the decoder. */
-    FrameQueue frameQueue(16);
+    FrameQueue frameQueue(16, frameBufSize);
 
     /* Seed the queue with the first frame already pulled by the caller. */
-    seed_frame_queue(frameQueue, first_sample, frameBufSize);
+    seed_frame_queue(frameQueue, first_sample);
 
     /* Producer: continuously decode subsequent frames into the queue. */
-    std::thread decodeThread = start_decode_thread(appsink, frameQueue, frameBufSize);
+    std::thread decodeThread = start_decode_thread(appsink, frameQueue);
 
-    /* Process loop */
-    std::vector<uint8_t> hostFrame;
-    bool have_frame = frameQueue.pop(hostFrame);
+    /* Pipelined double-buffer loop: the upload of frame N+1 and the readback of
+       frame N overlap the kernel instead of being serialised behind a blocking
+       transfer and a full queue barrier. */
+    std::vector<uint8_t> hostFrame[2];
+    cl::Event writeEv[2], taskEv[2], readEv[2];
+
+    /* Queue upload -> kernel -> readback for one buffer without blocking. The
+       host frame must stay put until writeEv completes, which it does: a buffer
+       is only refilled after its readEv has been waited on. */
+    auto launch = [&](int slot) {
+        q.enqueueWriteBuffer(imageToDevice[slot], CL_FALSE, 0, frameBufSize,
+                             hostFrame[slot].data(), NULL, &writeEv[slot]);
+        std::vector<cl::Event> taskWait{writeEv[slot]};
+        q.enqueueTask(krnl[slot], &taskWait, &taskEv[slot]);
+        std::vector<cl::Event> readWait{taskEv[slot]};
+        q.enqueueReadBuffer(imageFromDevice[slot], CL_FALSE, 0, frameBufSize,
+                            outBuf[slot].data(), &readWait, &readEv[slot]);
+        q.flush();
+    };
+
+    int cur = 0;
+    bool have_frame = frameQueue.pop(hostFrame[cur]);
+    if (have_frame) launch(cur);
+
     while (have_frame && g_running && (maxFrames <= 0 || processedFrames < maxFrames)) {
-        memcpy(inBuf.data(), hostFrame.data(),
-               std::min(frameBufSize, hostFrame.size()));
+        /* Get the next decoded frame moving on the device before blocking on
+           the current one. */
+        int next = cur ^ 1;
+        bool have_next = frameQueue.pop(hostFrame[next]);
+        if (have_next) launch(next);
 
-        /* Upload frame to device */
-        q.enqueueWriteBuffer(imageToDevice, CL_TRUE, 0, frameBufSize,
-                             (unsigned short *)inBuf.data());
-
-        /* Launch the kernel */
-        q.enqueueTask(krnl, NULL, NULL);
-        q.finish();
-
-        /* Read result back */
-        q.enqueueReadBuffer(imageFromDevice, CL_TRUE, 0, frameBufSize,
-                            (unsigned short *)outBuf.data());
+        readEv[cur].wait();
 
         /* Push processed frame to encode pipeline */
         GstClockTime pts = (GstClockTime)processedFrames * frame_duration;
-        if (!gst_push_frame(appsrc, outBuf.data(), frameBufSize, pts, frame_duration)) {
+        if (!gst_push_frame(appsrc, outBuf[cur].data(), frameBufSize, pts, frame_duration)) {
             std::cerr << "appsrc rejected buffer at frame " << processedFrames
                       << " (downstream error or EOS); stopping." << std::endl;
             break;
@@ -836,10 +894,13 @@ static int run_pl_pipeline(const std::string &userXclbin, enum Filter Ftype,
 
         report_batch_fps(processedFrames, batchStart);
 
-        /* Pull next decoded frame (produced concurrently by decodeThread) */
-        have_frame = frameQueue.pop(hostFrame);
+        have_frame = have_next;
+        cur = next;
     }
 
+    /* No drain loop as in the AIE path: each iteration retires the frame it
+       waited on, so only an early exit (Ctrl+C or maxFrames) leaves one in
+       flight. finish() waits for it, keeping its host buffers alive. */
     q.finish();
 
     finalize_stream(appsrc, enc_pipeline, enc_src_elem, dec_pipeline,

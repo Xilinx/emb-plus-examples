@@ -1143,8 +1143,11 @@ int main(int argc, char **argv) {
             }
         }
 
+        /* Without this the UVC driver halves the capture rate to lengthen
+           exposure whenever the scene is dark, ignoring the framerate caps. */
         std::string decodePipeline =
             "v4l2src device=" + devPath +
+            " extra-controls=\"c,exposure_dynamic_framerate=0\""
             " ! video/x-raw,format=YUY2,width=1920,height=1080,framerate=30/1"
             " ! appsink name=sink emit-signals=false sync=false max-buffers=2 drop=true";
         std::cout << "Camera decode pipeline: " << decodePipeline << std::endl;

@@ -457,6 +457,7 @@ static std::string build_encode_pipeline(double fps, bool displayMode,
            compute loop). Video file: non-leaky queue so the sync=true sink
            backpressures the loop, pacing processing to the source framerate. */
         const char *queueLeak = isCamera ? " leaky=downstream" : "";
+        /* videoconvert defaults to one thread, too slow to sustain 1080p30. */
         return
             "appsrc name=src is-live=true format=time block=true max-bytes=" +
             std::to_string(APPSRC_MAX_BYTES) +
@@ -464,7 +465,7 @@ static std::string build_encode_pipeline(double fps, bool displayMode,
             ",height=" + std::to_string(RESIZE_HEIGHT) +
             ",framerate=" + std::to_string(fps_int) + "/1"
             " ! queue max-size-buffers=2" + queueLeak +
-            " ! videoconvert ! vaapisink sync=" + sinkSync;
+            " ! videoconvert n-threads=0 ! vaapisink sync=" + sinkSync;
     }
     return
         "appsrc name=src is-live=true format=time block=true max-bytes=" +
@@ -472,7 +473,8 @@ static std::string build_encode_pipeline(double fps, bool displayMode,
         " caps=video/x-raw,format=YUY2,width=" + std::to_string(RESIZE_WIDTH) +
         ",height=" + std::to_string(RESIZE_HEIGHT) +
         ",framerate=" + std::to_string(fps_int) + "/1"
-        " ! queue max-size-buffers=2 ! videoconvert ! video/x-raw,format=NV12"
+        " ! queue max-size-buffers=2 ! videoconvert n-threads=0"
+        " ! video/x-raw,format=NV12"
         " ! vaapih264enc rate-control=cbr bitrate=8000"
         " ! h264parse ! mp4mux"
         " ! filesink location=hw_out.mp4";
@@ -1045,7 +1047,7 @@ int main(int argc, char **argv) {
         std::string decodePipeline =
             "filesrc location=" + inputVideo +
             " ! qtdemux ! h264parse ! vaapih264dec"
-            " ! videoconvert ! video/x-raw,format=YUY2"
+            " ! videoconvert n-threads=0 ! video/x-raw,format=YUY2"
             " ! appsink name=sink emit-signals=false sync=false max-buffers=2 drop=false";
         std::cout << "Decode pipeline: " << decodePipeline << std::endl;
 

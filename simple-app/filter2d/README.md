@@ -19,12 +19,18 @@ and the YUYV frame is fed to the hardware accelerator. Tiler and stitcher
 components in the PL act as data movers to the AIE core, while they manage the
 distribution and aggregation of image tiles and metadata across the AIE. The
 computation of the f2d algorithm on the luma samples (Y-channel) happens in the
-AIE; this operation is repeated over every tile. The final output preserves the
-untouched chroma samples (UV-channels) of the processed image. This is an
+AIE; this operation is repeated over every tile. This is an
 example for a typical PLIO AIE-based design as the data movers Tiler/Stitcher
 are in the PL and AIE for computation. The F2d on the AIE supports fixed-point
 coefficients. Decimal values are left shifted by 10 to obtain the equivalent
 fixed-point integer value in the AIE.
+
+**No implementation filters chroma.** All three convolve the luma plane only.
+Chroma is either passed through unchanged or set to neutral grey, selected with
+`-k`; see [Chroma handling](#chroma-handling). This differs from OpenCV's
+`filter2D`, which convolves every channel of a multi-channel image.
+
+All three implementations saturate their output to the range 0 to 255.
 
 ## Usage
 
@@ -43,13 +49,11 @@ packages](https://www.sapphiretech.com/en/commercial/edge-plus-vpr_4616#Download
 
 ```
 # Install Xilinx RunTime (XRT) library
-$ sudo apt install -y ./xrt_202620.2.26.0_22.04-amd64-xrt.deb
+$ sudo apt install -y ./xrt_202610.2.23.243_22.04-amd64-xrt.deb
 
-# Install accel firmware binary for filter2D AIE (*xclbin)
-$ sudo apt install -y ./filter2d-aie-ve2302_2.0.deb
-
-# Install accel firmware binary for filter2D PL (*xclbin)
-$ sudo apt install -y ./filter2d-pl-ve2302_2.0.deb
+# Install accel firmware binary for filter2D (*xclbin). It carries both the AIE
+# graph and the PL accelerator, so -m selects between them at runtime.
+$ sudo apt install -y ./filter2d-ve2302_2.0.deb
 
 # Install host app, and OpenCV as dependency.
 $ sudo apt install -y ./filter2d-acceleration-application_2.0-0xlnx1_all.deb
@@ -63,6 +67,16 @@ $ sudo reboot
 ```
 
 ## Test application
+
+Before running the application for the first time, reload the xocl driver
+with polling mode enabled (one-time setup per boot). This workaround is
+required for XRT version 2.23.243 to prevent a race condition for the interrupt
+controller.
+
+```
+$ sudo rmmod xocl
+$ sudo modprobe xocl poll_mode=1
+```
 
 ```
 $ source /opt/xilinx/xrt/setup.sh
@@ -91,13 +105,16 @@ $ <Executable Name> <Filter> -c [camera_device_index] -d
 # Use -t flag to set camera capture duration in seconds (default: 30):
 $ <Executable Name> <Filter> -c [camera_device_index] -t 60
 
+# Use -k to override chroma handling (auto|keep|grey, default: auto):
+$ <Executable Name> <Filter> -i [path/testimg.jpg] -k keep
+
 # Use -h for usage help
 $ <Executable Name> -h
 
 # Example using default test image and default xclbin (AIE mode)
 $ filter2D_accel.elf Edge
 
-# Example with PL mode
+# Example with PL mode. Same xclbin -- no reprogramming between the two.
 $ filter2D_accel.elf Edge -m pl
 
 # Example with custom image
@@ -124,6 +141,90 @@ $ filter2D_accel.elf Edge -c 0 -t 60
 # Example with USB camera displayed on screen
 $ filter2D_accel.elf Edge -c 0 -d
 ```
+
+## Filter presets
+
+A kernel that sums to zero is an edge detector: flat areas of the image produce
+a luma of zero and the output is an edge magnitude, not a picture. A kernel that
+sums to one preserves the luma of flat areas, so the output still looks like the
+scene.
+
+| Preset | Kernel sum | Output | Chroma default | PL shift |
+|---|---|---|---|---|
+| Horizontal-Gradient | 0 | edge magnitude | grey | 0 |
+| Emboss | 1 | scene | keep | 0 |
+| Edge | 0 | edge magnitude | grey | 0 |
+| Blur | 1 | scene, 3x3 Gaussian | keep | 4 |
+| Identity | 1 | scene, unchanged | keep | 0 |
+| Horizontal-Sobel | 0 | edge magnitude | grey | 0 |
+
+## Chroma handling
+
+U and V are offsets relative to Y, not an independent hue. When a zero-sum
+kernel drives luma to near zero, a fixed R-G offset becomes a large *relative*
+difference and the original chroma renders as a misleading colour: the yellow
+flag in the sample image comes out red.
+
+`-k` selects how chroma is treated:
+
+| `-k` | Behaviour |
+|---|---|
+| `auto` (default) | grey for zero-sum kernels, keep for the rest |
+| `keep` | pass the input chroma through unchanged |
+| `grey` | write 128 to both components, giving a monochrome output |
+
+`auto` is derived from the coefficient sum at run time, so a new preset gets the
+appropriate default with no table to maintain.
+
+Chroma is never convolved. Filtering it would require the 4:2:2 stream to be
+deinterleaved first, and measured against a full-RGB reference it changes a
+blurred frame by a mean of 0.66 out of 255 — smaller than the cost of a second
+filter instance.
+
+## Border handling
+
+The implementations do not agree at the image border, and this is expected:
+
+| Implementation | Border |
+|---|---|
+| `run_ref` (software reference) | replicate the edge pixel |
+| AIE kernel | replicate the edge pixel |
+| PL kernel | zero-pad |
+
+`xf::cv::filter2D` only supports `XF_BORDER_CONSTANT`; its `BORDER_TYPE`
+template parameter is accepted but not used, so requesting replicate has no
+effect.
+
+Border pixels therefore differ by up to the full 0-255 range, which no
+magnitude tolerance can absorb. `compareResult` **excludes the outer
+`filter_size / 2` ring** (1 pixel for a 3x3 kernel) and applies its per-pixel
+tolerance of 1 to the interior only. On 1920x1080 that skips 11992 of 4147200
+bytes, 0.29%, and the count is printed with the result. Interior pixels are
+bit-exact across all three implementations.
+
+## Implementation notes
+
+Relevant when changing the kernels or adding a preset.
+
+- **Adding a preset** needs an entry in `kData` and one in `kShift`. PL applies
+  coefficients as integers, and `matrixDeconstructor` casts to `short`, so a
+  fractional coefficient truncates to zero unless it is scaled by `2^kShift`
+  with the kernel right-shifting by the same amount. The AIE kernel and
+  `run_ref` take the float coefficients directly and ignore `kShift` — the AIE
+  path scales by 1024 and its SRS shifts back by 10. A fractional preset that
+  forgets `kShift` therefore breaks on PL, and only on PL, with no diagnostic.
+- **AIE coefficient lane 12 is reserved** for `chroma_mode`. The 3x3 kernel
+  occupies lanes 0 to 11 of the 16-entry buffer and the kernel reads only those,
+  so the mode rides along without a change to the graph interface. Do not reuse
+  lanes 12 to 15 for anything else.
+- **The PL kernel signature carries `chroma_mode` and `shift`.** Host and
+  `.xclbin` must be built and deployed as a pair; a mismatch fails at `setArg`.
+- **The PL chroma stage reads its input stream in both modes.** It sits inside a
+  dataflow region, where an unconsumed stream stalls the pipeline.
+- **The shipped xclbin is the combined one**, from the `filter2d_combined`
+  overlay, so `-m` switches path without reprogramming. The two runtimes never
+  coexist: the OpenCL context is created only on the PL branch and
+  `xF::deviceInit` only on the AIE branch.
 
 ### Image mode
 
@@ -162,8 +263,8 @@ $ cd emb-plus-examples/simple-app/filter2d
 $ make
 ```
 
-Note: This app may not build with the latest commit of Vitis_Libraries.
-Please use commit ab0dca2.
+Note: the Vitis_Libraries submodule is pinned to the revision this app is built
+and verified against. Use the pinned revision rather than the branch tip.
 
 # License
 
